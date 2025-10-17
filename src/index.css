@@ -1,0 +1,240 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Marketplace Local Design System - Focused on local business community
+All colors MUST be HSL. Semantic tokens for consistent design.
+*/
+
+@layer base {
+  :root {
+    /* Cor background e texto */
+    --background: 210 25% 98%;
+    --foreground: 222 25% 12%;
+
+    /* componentes do card */
+    --card: 0 0% 100%;
+    --card-foreground: 222 25% 12%;
+
+    /* Popover components */
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 25% 12%;
+
+    /* Marca principal */
+    --primary: 217 89% 51%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 217 89% 46%;
+
+    /*  */
+    --secondary: 142 71% 45%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-hover: 142 71% 40%;
+
+    /* Muted backgrounds */
+    --muted: 210 25% 95%;
+    --muted-foreground: 222 13% 46%;
+
+    /* Accent colors */
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Status colors */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    /* Elementos interativos */
+    --border: 214 20% 88%;
+    --input: 214 20% 92%;
+    --ring: 217 89% 51%;
+
+    --radius: 0.75rem;
+
+    /* Cores gradiantes */
+    --gradient-primary: linear-gradient(135deg, hsl(217 89% 51%), hsl(217 89% 61%));
+    --gradient-secondary: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(217 89% 51%), hsl(135, 72%, 46%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 25% 98%));
+
+    /* Sombras */
+    --shadow-card: 0 4px 6px -1px hsl(217 89% 51% / 0.1), 0 2px 4px -1px hsl(217 89% 51% / 0.06);
+    --shadow-card-hover: 0 10px 15px -3px hsl(217 89% 51% / 0.1), 0 4px 6px -2px hsl(217 89% 51% / 0.05);
+    --shadow-button: 0 2px 4px hsl(217 89% 51% / 0.2);
+
+    /* Transiçoes */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s ease-out;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* Dark mode overrides */
+    --background: 222 25% 8%;
+    --foreground: 210 25% 95%;
+
+    --card: 222 25% 10%;
+    --card-foreground: 210 25% 95%;
+
+    --popover: 222 25% 10%;
+    --popover-foreground: 210 25% 95%;
+
+    --primary: 217 89% 61%;
+    --primary-foreground: 222 25% 8%;
+    --primary-hover: 217 89% 66%;
+
+    --secondary: 142 71% 55%;
+    --secondary-foreground: 222 25% 8%;
+    --secondary-hover: 142 71% 60%;
+
+    --muted: 222 25% 15%;
+    --muted-foreground: 222 13% 65%;
+
+    --accent: 25 95% 63%;
+    --accent-foreground: 222 25% 8%;
+
+    --destructive: 0 72% 61%;
+    --destructive-foreground: 222 25% 8%;
+    --success: 142 71% 55%;
+    --success-foreground: 222 25% 8%;
+
+    --border: 222 25% 20%;
+    --input: 222 25% 18%;
+    --ring: 217 89% 61%;
+
+    --gradient-hero: linear-gradient(135deg, hsl(217 89% 51%), hsl(142 71% 45%));
+    --gradient-card: linear-gradient(145deg, hsl(222 25% 10%), hsl(222 25% 12%));
+    --shadow-card: 0 4px 6px -1px hsl(0 0% 0% / 0.3), 0 2px 4px -1px hsl(0 0% 0% / 0.2);
+    --shadow-card-hover: 0 10px 15px -3px hsl(0 0% 0% / 0.3), 0 4px 6px -2px hsl(0 0% 0% / 0.2);
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 220 13% 13%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 13% 13%;
+
+    --primary: 180 65% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 85% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 220 13% 46%;
+
+    --accent: 180 75% 95%;
+    --accent-foreground: 180 65% 25%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 180 65% 35%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 15% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 13% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 13% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 180 70% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 30 85% 60%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 13% 20%;
+    --muted-foreground: 220 13% 65%;
+
+    --accent: 180 65% 20%;
+    --accent-foreground: 180 75% 90%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    --ring: 180 70% 45%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
