@@ -38,7 +38,7 @@ const Register = () => {
 
   const handleProviderSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!providerData.cpf || !providerData.password) {
       toast.error("CPF e senha são obrigatórios");
       return;
@@ -55,7 +55,7 @@ const Register = () => {
 
   const handleClientSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!clientData.cpf || !clientData.password) {
       toast.error("CPF e senha são obrigatórios");
       return;
