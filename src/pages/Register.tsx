@@ -1,244 +1,109 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { Store, User } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
 
-const Register = () => {
-  const [providerData, setProviderData] = useState({
-    cpf: "",
-    password: "",
-    cnpj: "",
-    services: [] as string[],
-    location: "",
-    name: "",
-  });
-
-  const [clientData, setClientData] = useState({
-    name: "",
-    cpf: "",
-    password: "",
+export default function Register() {
+  const navigate = useNavigate();
+  const [form, setForm] = useState({
     email: "",
+    password: "",
+    confirmPassword: "",
   });
+  const [loading, setLoading] = useState(false);
 
-  const serviceOptions = [
-    "Encanador",
-    "Eletricista",
-    "Pintor",
-    "Pedreiro",
-    "Jardineiro",
-    "Limpeza",
-    "Carpinteiro",
-    "Outros",
-  ];
-
-  const handleProviderSubmit = (e: React.FormEvent) => {
+  async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!providerData.cpf || !providerData.password) {
-      toast.error("CPF e senha são obrigatórios");
+    if (form.password !== form.confirmPassword) {
+      alert("As senhas não coincidem!");
       return;
     }
 
-    if (providerData.services.length === 0) {
-      toast.error("Selecione pelo menos um serviço");
-      return;
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+    });
+    setLoading(false);
+
+    if (error) {
+      alert("Erro ao cadastrar: " + error.message);
+    } else {
+      alert("Cadastro realizado com sucesso! Faça login para continuar.");
+      navigate("/login");
     }
-
-    toast.success("Cadastro de prestador realizado com sucesso!");
-    console.log("Provider data:", providerData);
-  };
-
-  const handleClientSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!clientData.cpf || !clientData.password) {
-      toast.error("CPF e senha são obrigatórios");
-      return;
-    }
-
-    toast.success("Cadastro de cliente realizado com sucesso!");
-    console.log("Client data:", clientData);
-  };
-
-  const toggleService = (service: string) => {
-    setProviderData(prev => ({
-      ...prev,
-      services: prev.services.includes(service)
-        ? prev.services.filter(s => s !== service)
-        : [...prev.services, service]
-    }));
-  };
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-primary/10 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl shadow-xl">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold text-primary">Marketplace Local</CardTitle>
-          <CardDescription className="text-lg">Conectando pessoas e serviços</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="provider" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="provider" className="flex items-center gap-2">
-                <Store className="w-4 h-4" />
-                Seja um Prestador
-              </TabsTrigger>
-              <TabsTrigger value="client" className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                Ser Cliente
-              </TabsTrigger>
-            </TabsList>
+    <div className="flex items-center justify-center min-h-screen bg-gray-100">
+      <form
+        onSubmit={handleRegister}
+        className="p-6 bg-white rounded-2xl shadow-md w-96 space-y-4"
+      >
+        <h1 className="text-2xl font-semibold text-center">
+          Criar nova conta
+        </h1>
 
-            <TabsContent value="provider">
-              <form onSubmit={handleProviderSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="provider-name">Nome Completo</Label>
-                  <Input
-                    id="provider-name"
-                    value={providerData.name}
-                    onChange={(e) => setProviderData({ ...providerData, name: e.target.value })}
-                    placeholder="Seu nome completo"
-                  />
-                </div>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium">
+            E-mail
+          </label>
+          <Input
+            id="email"
+            type="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            placeholder="Digite seu e-mail"
+            required
+          />
+        </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="provider-cpf">CPF *</Label>
-                  <Input
-                    id="provider-cpf"
-                    value={providerData.cpf}
-                    onChange={(e) => setProviderData({ ...providerData, cpf: e.target.value })}
-                    placeholder="000.000.000-00"
-                    required
-                  />
-                </div>
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium">
+            Senha
+          </label>
+          <Input
+            id="password"
+            type="password"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="Crie uma senha"
+            required
+          />
+        </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="provider-password">Senha *</Label>
-                  <Input
-                    id="provider-password"
-                    type="password"
-                    value={providerData.password}
-                    onChange={(e) => setProviderData({ ...providerData, password: e.target.value })}
-                    placeholder="Senha segura"
-                    required
-                  />
-                </div>
+        <div>
+          <label htmlFor="confirmPassword" className="block text-sm font-medium">
+            Confirmar Senha
+          </label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            value={form.confirmPassword}
+            onChange={(e) =>
+              setForm({ ...form, confirmPassword: e.target.value })
+            }
+            placeholder="Repita a senha"
+            required
+          />
+        </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="provider-cnpj">CNPJ (Opcional)</Label>
-                  <Input
-                    id="provider-cnpj"
-                    value={providerData.cnpj}
-                    onChange={(e) => setProviderData({ ...providerData, cnpj: e.target.value })}
-                    placeholder="00.000.000/0000-00"
-                  />
-                </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Cadastrando..." : "Cadastrar"}
+        </Button>
 
-                <div className="space-y-2">
-                  <Label htmlFor="provider-location">Onde você atende? *</Label>
-                  <Input
-                    id="provider-location"
-                    value={providerData.location}
-                    onChange={(e) => setProviderData({ ...providerData, location: e.target.value })}
-                    placeholder="Cidade, bairro ou região"
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label>Serviços que você oferece *</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {serviceOptions.map((service) => (
-                      <div key={service} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={service}
-                          checked={providerData.services.includes(service)}
-                          onCheckedChange={() => toggleService(service)}
-                        />
-                        <label
-                          htmlFor={service}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {service}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <Button type="submit" className="w-full" size="lg">
-                  Cadastrar como Prestador
-                </Button>
-              </form>
-            </TabsContent>
-
-            <TabsContent value="client">
-              <form onSubmit={handleClientSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="client-name">Nome Completo</Label>
-                  <Input
-                    id="client-name"
-                    value={clientData.name}
-                    onChange={(e) => setClientData({ ...clientData, name: e.target.value })}
-                    placeholder="Seu nome completo"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="client-email">E-mail</Label>
-                  <Input
-                    id="client-email"
-                    type="email"
-                    value={clientData.email}
-                    onChange={(e) => setClientData({ ...clientData, email: e.target.value })}
-                    placeholder="seu@email.com"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="client-cpf">CPF *</Label>
-                  <Input
-                    id="client-cpf"
-                    value={clientData.cpf}
-                    onChange={(e) => setClientData({ ...clientData, cpf: e.target.value })}
-                    placeholder="000.000.000-00"
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="client-password">Senha *</Label>
-                  <Input
-                    id="client-password"
-                    type="password"
-                    value={clientData.password}
-                    onChange={(e) => setClientData({ ...clientData, password: e.target.value })}
-                    placeholder="Senha segura"
-                    required
-                  />
-                </div>
-
-                <Button type="submit" className="w-full" size="lg">
-                  Cadastrar como Cliente
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
-
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            Já tem uma conta?{" "}
-            <a href="/" className="text-primary font-medium hover:underline">
-              Fazer login
-            </a>
-          </div>
-        </CardContent>
-      </Card>
+        <p className="text-sm text-center text-gray-600">
+          Já possui conta?{" "}
+          <span
+            onClick={() => navigate("/login")}
+            className="text-blue-600 hover:underline cursor-pointer"
+          >
+            Faça login
+          </span>
+        </p>
+      </form>
     </div>
   );
-};
-
-export default Register;
+}
