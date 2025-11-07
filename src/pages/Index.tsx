@@ -3,22 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
 import { Store, Users, MapPin, Shield, User } from "lucide-react";
 import { User as SupabaseUser, Session } from "@supabase/supabase-js";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [loginData, setLoginData] = useState({
-    email: "",
-    password: "",
-  });
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -38,42 +29,6 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!loginData.email || !loginData.password) {
-      toast({
-        title: "Campos obrigatórios",
-        description: "Preencha email e senha",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: loginData.email,
-        password: loginData.password,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Login realizado!",
-        description: "Bem-vindo de volta.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro no login",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-primary/10">
@@ -110,43 +65,22 @@ const Index = () => {
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto mb-16">
-          {/* Login Card */}
+          {/* Auth Card */}
           {!user ? (
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle className="text-2xl">Entrar na Plataforma</CardTitle>
-                <CardDescription>Acesse sua conta para continuar</CardDescription>
+                <CardTitle className="text-2xl">Acesse a Plataforma</CardTitle>
+                <CardDescription>Entre ou crie uma conta para continuar</CardDescription>
               </CardHeader>
-              <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={loginData.email}
-                      onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                      placeholder="seu@email.com"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Senha</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      value={loginData.password}
-                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                      placeholder="Digite sua senha"
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                    {loading ? "Entrando..." : "Entrar"}
-                  </Button>
-                </form>
-
-                <div className="mt-6 text-center">
+              <CardContent className="space-y-4">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={() => navigate("/auth")}
+                >
+                  Entrar
+                </Button>
+                <div className="text-center">
                   <p className="text-sm text-muted-foreground mb-3">
                     Ainda não tem uma conta?
                   </p>

@@ -1,109 +1,407 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/components/ui/use-toast";
+import { Store, User } from "lucide-react";
 
-export default function Register() {
+const Register = () => {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  async function handleRegister(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    // Check if already logged in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        navigate("/profile");
+      }
+    });
+  }, [navigate]);
 
-    if (form.password !== form.confirmPassword) {
-      alert("As senhas não coincidem!");
+  const [providerData, setProviderData] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    cpf: "",
+    cnpj: "",
+    phone: "",
+    services: [] as string[],
+    location: "",
+  });
+
+  const [clientData, setClientData] = useState({
+    email: "",
+    password: "",
+    fullName: "",
+    cpf: "",
+    phone: "",
+  });
+
+  const serviceOptions = [
+    "Encanador",
+    "Eletricista",
+    "Pintor",
+    "Pedreiro",
+    "Jardineiro",
+    "Limpeza",
+    "Carpinteiro",
+    "Outros",
+  ];
+
+  const handleProviderSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!providerData.email || !providerData.password || !providerData.fullName || !providerData.cpf || !providerData.phone) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Email, nome completo, CPF, telefone e senha são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (providerData.services.length === 0) {
+      toast({
+        title: "Serviços necessários",
+        description: "Selecione pelo menos um serviço",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.password,
-    });
-    setLoading(false);
 
-    if (error) {
-      alert("Erro ao cadastrar: " + error.message);
-    } else {
-      alert("Cadastro realizado com sucesso! Faça login para continuar.");
-      navigate("/login");
+    try {
+      // Sign up the user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: providerData.email,
+        password: providerData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Erro ao criar usuário");
+
+      // Create profile
+      const { error: profileError } = await supabase.from("profiles").insert({
+        user_id: authData.user.id,
+        user_type: "provider",
+        full_name: providerData.fullName,
+        cpf: providerData.cpf,
+        cnpj: providerData.cnpj || null,
+        phone: providerData.phone,
+        services: providerData.services,
+        location: providerData.location || null,
+      });
+
+      if (profileError) throw profileError;
+
+      toast({
+        title: "Cadastro realizado!",
+        description: "Bem-vindo ao Marketplace Local.",
+      });
+
+      navigate("/profile");
+    } catch (error: any) {
+      toast({
+        title: "Erro no cadastro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-  }
+  };
+
+  const handleClientSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!clientData.email || !clientData.password || !clientData.fullName || !clientData.cpf || !clientData.phone) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Email, nome completo, CPF, telefone e senha são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Sign up the user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: clientData.email,
+        password: clientData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+        },
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error("Erro ao criar usuário");
+
+      // Create profile
+      const { error: profileError } = await supabase.from("profiles").insert({
+        user_id: authData.user.id,
+        user_type: "client",
+        full_name: clientData.fullName,
+        cpf: clientData.cpf,
+        phone: clientData.phone,
+      });
+
+      if (profileError) throw profileError;
+
+      toast({
+        title: "Cadastro realizado!",
+        description: "Bem-vindo ao Marketplace Local.",
+      });
+
+      navigate("/profile");
+    } catch (error: any) {
+      toast({
+        title: "Erro no cadastro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleService = (service: string) => {
+    setProviderData(prev => ({
+      ...prev,
+      services: prev.services.includes(service)
+        ? prev.services.filter(s => s !== service)
+        : [...prev.services, service]
+    }));
+  };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <form
-        onSubmit={handleRegister}
-        className="p-6 bg-white rounded-2xl shadow-md w-96 space-y-4"
-      >
-        <h1 className="text-2xl font-semibold text-center">
-          Criar nova conta
-        </h1>
+    <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-primary/10 flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl shadow-xl">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold text-primary">Marketplace Local</CardTitle>
+          <CardDescription className="text-lg">Conectando pessoas e serviços</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="provider" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="provider" className="flex items-center gap-2">
+                <Store className="w-4 h-4" />
+                Seja um Prestador
+              </TabsTrigger>
+              <TabsTrigger value="client" className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Ser Cliente
+              </TabsTrigger>
+            </TabsList>
 
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium">
-            E-mail
-          </label>
-          <Input
-            id="email"
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            placeholder="Digite seu e-mail"
-            required
-          />
-        </div>
+            <TabsContent value="provider">
+              <form onSubmit={handleProviderSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="provider-email">Email *</Label>
+                  <Input
+                    id="provider-email"
+                    type="email"
+                    value={providerData.email}
+                    onChange={(e) => setProviderData({ ...providerData, email: e.target.value })}
+                    placeholder="seu@email.com"
+                    required
+                  />
+                </div>
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium">
-            Senha
-          </label>
-          <Input
-            id="password"
-            type="password"
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            placeholder="Crie uma senha"
-            required
-          />
-        </div>
+                <div className="space-y-2">
+                  <Label htmlFor="provider-password">Senha *</Label>
+                  <Input
+                    id="provider-password"
+                    type="password"
+                    value={providerData.password}
+                    onChange={(e) => setProviderData({ ...providerData, password: e.target.value })}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
 
-        <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium">
-            Confirmar Senha
-          </label>
-          <Input
-            id="confirmPassword"
-            type="password"
-            value={form.confirmPassword}
-            onChange={(e) =>
-              setForm({ ...form, confirmPassword: e.target.value })
-            }
-            placeholder="Repita a senha"
-            required
-          />
-        </div>
+                <div className="space-y-2">
+                  <Label htmlFor="provider-name">Nome Completo *</Label>
+                  <Input
+                    id="provider-name"
+                    value={providerData.fullName}
+                    onChange={(e) => setProviderData({ ...providerData, fullName: e.target.value })}
+                    placeholder="Seu nome completo"
+                    required
+                  />
+                </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? "Cadastrando..." : "Cadastrar"}
-        </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="provider-cpf">CPF *</Label>
+                  <Input
+                    id="provider-cpf"
+                    value={providerData.cpf}
+                    onChange={(e) => setProviderData({ ...providerData, cpf: e.target.value })}
+                    placeholder="000.000.000-00"
+                    required
+                  />
+                </div>
 
-        <p className="text-sm text-center text-gray-600">
-          Já possui conta?{" "}
-          <span
-            onClick={() => navigate("/login")}
-            className="text-blue-600 hover:underline cursor-pointer"
-          >
-            Faça login
-          </span>
-        </p>
-      </form>
+                <div className="space-y-2">
+                  <Label htmlFor="provider-cnpj">CNPJ (Opcional)</Label>
+                  <Input
+                    id="provider-cnpj"
+                    value={providerData.cnpj}
+                    onChange={(e) => setProviderData({ ...providerData, cnpj: e.target.value })}
+                    placeholder="00.000.000/0000-00"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="provider-phone">Número de Telefone *</Label>
+                  <Input
+                    id="provider-phone"
+                    type="tel"
+                    value={providerData.phone}
+                    onChange={(e) => setProviderData({ ...providerData, phone: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="provider-location">Onde você atende?</Label>
+                  <Input
+                    id="provider-location"
+                    value={providerData.location}
+                    onChange={(e) => setProviderData({ ...providerData, location: e.target.value })}
+                    placeholder="Cidade, bairro ou região"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Label>Serviços que você oferece *</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {serviceOptions.map((service) => (
+                      <div key={service} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={service}
+                          checked={providerData.services.includes(service)}
+                          onCheckedChange={() => toggleService(service)}
+                        />
+                        <label
+                          htmlFor={service}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {service}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  {loading ? "Cadastrando..." : "Cadastrar como Prestador"}
+                </Button>
+                <p className="text-sm text-muted-foreground text-center">
+                  Já tem conta?{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/auth")}
+                    className="text-primary hover:underline"
+                  >
+                    Entrar
+                  </button>
+                </p>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="client">
+              <form onSubmit={handleClientSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="client-email">Email *</Label>
+                  <Input
+                    id="client-email"
+                    type="email"
+                    value={clientData.email}
+                    onChange={(e) => setClientData({ ...clientData, email: e.target.value })}
+                    placeholder="seu@email.com"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client-password">Senha *</Label>
+                  <Input
+                    id="client-password"
+                    type="password"
+                    value={clientData.password}
+                    onChange={(e) => setClientData({ ...clientData, password: e.target.value })}
+                    placeholder="••••••••"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client-name">Nome Completo *</Label>
+                  <Input
+                    id="client-name"
+                    value={clientData.fullName}
+                    onChange={(e) => setClientData({ ...clientData, fullName: e.target.value })}
+                    placeholder="Seu nome completo"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client-cpf">CPF *</Label>
+                  <Input
+                    id="client-cpf"
+                    value={clientData.cpf}
+                    onChange={(e) => setClientData({ ...clientData, cpf: e.target.value })}
+                    placeholder="000.000.000-00"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="client-phone">Número de Telefone *</Label>
+                  <Input
+                    id="client-phone"
+                    type="tel"
+                    value={clientData.phone}
+                    onChange={(e) => setClientData({ ...clientData, phone: e.target.value })}
+                    placeholder="(00) 00000-0000"
+                    required
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                  {loading ? "Cadastrando..." : "Cadastrar como Cliente"}
+                </Button>
+                <p className="text-sm text-muted-foreground text-center">
+                  Já tem conta?{" "}
+                  <button
+                    type="button"
+                    onClick={() => navigate("/auth")}
+                    className="text-primary hover:underline"
+                  >
+                    Entrar
+                  </button>
+                </p>
+              </form>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default Register;
