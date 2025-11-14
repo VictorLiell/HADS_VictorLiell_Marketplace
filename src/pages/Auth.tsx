@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ const Auth = () => {
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    // Check if already logged in
+    // Verifica se já está logado
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         navigate("/");
@@ -25,7 +25,7 @@ const Auth = () => {
     });
   }, [navigate]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -41,6 +41,9 @@ const Auth = () => {
         title: "Login realizado!",
         description: "Bem-vindo de volta.",
       });
+
+      // Mantive o redirecionamento para o perfil,
+      // que está consistente com o fluxo do Register
       navigate("/profile");
     } catch (error: any) {
       toast({
@@ -67,12 +70,14 @@ const Auth = () => {
 
         <Card className="p-6">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-foreground">Marketplace Local</h1>
+            <h1 className="text-2xl font-bold text-foreground">
+              Marketplace Local
+            </h1>
             <p className="text-muted-foreground mt-2">Entre na sua conta</p>
           </div>
 
           <Tabs defaultValue="login">
-            <TabsList className="grid w-full grid-cols-1">
+            <TabsList className="grid w-full grid-cols-1 mb-4">
               <TabsTrigger value="login">Entrar</TabsTrigger>
             </TabsList>
 
@@ -89,6 +94,7 @@ const Auth = () => {
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="password">Senha</Label>
                   <Input
@@ -100,7 +106,12 @@ const Auth = () => {
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading}
+                >
                   {loading ? "Entrando..." : "Entrar"}
                 </Button>
               </form>
