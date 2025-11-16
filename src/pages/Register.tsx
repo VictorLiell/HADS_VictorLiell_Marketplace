@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from "react";
+import { useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -14,21 +14,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
-import { Store, User } from "lucide-react";
+import { Store, User, Eye, EyeOff } from "lucide-react";
 
 const Register = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    // Verifica se já está logado
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/profile");
-      }
-    });
-  }, [navigate]);
+  // 🔹 estados para mostrar/ocultar senha
+  const [showProviderPassword, setShowProviderPassword] = useState(false);
+  const [showClientPassword, setShowClientPassword] = useState(false);
 
   const [providerData, setProviderData] = useState({
     email: "",
@@ -100,7 +95,21 @@ const Register = () => {
         },
       });
 
-      if (authError) throw authError;
+      // 🔹 Tratamento de email já cadastrado
+      if (authError) {
+        if (authError.message?.includes("User already registered")) {
+          toast({
+            title: "Email já cadastrado",
+            description:
+              "Este email já está sendo usado. Faça login ou use outro email.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        throw authError;
+      }
+
       if (!authData.user) throw new Error("Erro ao criar usuário");
 
       // Perfil
@@ -165,7 +174,21 @@ const Register = () => {
         },
       });
 
-      if (authError) throw authError;
+      // 🔹 Tratamento de email já cadastrado
+      if (authError) {
+        if (authError.message?.includes("User already registered")) {
+          toast({
+            title: "Email já cadastrado",
+            description:
+              "Este email já está sendo usado. Faça login ou use outro email.",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+        throw authError;
+      }
+
       if (!authData.user) throw new Error("Erro ao criar usuário");
 
       // Perfil
@@ -251,19 +274,34 @@ const Register = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="provider-password">Senha *</Label>
-                  <Input
-                    id="provider-password"
-                    type="password"
-                    value={providerData.password}
-                    onChange={(e) =>
-                      setProviderData({
-                        ...providerData,
-                        password: e.target.value,
-                      })
-                    }
-                    placeholder="••••••••"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="provider-password"
+                      type={showProviderPassword ? "text" : "password"}
+                      value={providerData.password}
+                      onChange={(e) =>
+                        setProviderData({
+                          ...providerData,
+                          password: e.target.value,
+                        })
+                      }
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowProviderPassword((prev) => !prev)
+                      }
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
+                    >
+                      {showProviderPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -427,19 +465,34 @@ const Register = () => {
 
                 <div className="space-y-2">
                   <Label htmlFor="client-password">Senha *</Label>
-                  <Input
-                    id="client-password"
-                    type="password"
-                    value={clientData.password}
-                    onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        password: e.target.value,
-                      })
-                    }
-                    placeholder="••••••••"
-                    required
-                  />
+                  <div className="relative">
+                    <Input
+                      id="client-password"
+                      type={showClientPassword ? "text" : "password"}
+                      value={clientData.password}
+                      onChange={(e) =>
+                        setClientData({
+                          ...clientData,
+                          password: e.target.value,
+                        })
+                      }
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowClientPassword((prev) => !prev)
+                      }
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
+                    >
+                      {showClientPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2">

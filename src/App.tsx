@@ -4,6 +4,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/auth";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
+import { ProviderReviewPage } from "./pages/ProviderReviewPage"; // <-- nova página
 
 const App = () => {
   return (
@@ -17,6 +18,12 @@ const App = () => {
 
       {/* Área logada */}
       <Route path="/profile" element={<Profile />} />
+
+      {/* ✨ Rota nova — Avaliação do prestador ✨ */}
+      <Route
+        path="/prestadores/:providerId/avaliar"
+        element={<ProviderReviewPage />}
+      />
 
       {/* Rotas antigas mantidas por compatibilidade */}
       <Route path="/login" element={<Auth />} />
