@@ -27,108 +27,36 @@ import { ServiceCard } from "@/components/ServiceCard";
 
 import heroImage from "@/assets/hero-marketplace.jpg";
 
-// Mock data para prestadores de serviço
-const mockProviders = [
-  {
-    id: "1",
-    name: "João Silva",
-    service: "Encanamento Residencial",
-    category: "Elétrica e Encanamento",
-    rating: 4.8,
-    reviews: 24,
-    location: "Centro, Passo Fundo",
-    phone: "(54) 99999-1234",
-    image: "",
-    description:
-      "Especialista em encanamento residencial e comercial. Atendimento 24h para emergências.",
-    price: "A partir de R$ 80",
-    available: true,
-  },
-  {
-    id: "2",
-    name: "Maria Santos",
-    service: "Cabeleireira e Manicure",
-    category: "Beleza e Estética",
-    rating: 4.9,
-    reviews: 45,
-    location: "Vila Nova, Passo Fundo",
-    phone: "(54) 99999-5678",
-    image: "",
-    description:
-      "Salão completo com cortes modernos, coloração e tratamentos. Atendimento personalizado.",
-    price: "A partir de R$ 45",
-    available: false,
-  },
-  {
-    id: "3",
-    name: "Carlos Pereira",
-    service: "Eletricista Profissional",
-    category: "Elétrica e Encanamento",
-    rating: 4.7,
-    reviews: 32,
-    location: "São José, Passo Fundo",
-    phone: "(54) 99999-9012",
-    image: "",
-    description:
-      "Instalações elétricas, manutenção e emergências. Licenciado e experiente.",
-    price: "A partir de R$ 90",
-    available: true,
-  },
-  {
-    id: "4",
-    name: "Ana Costa",
-    service: "Faxineira e Organização",
-    category: "Limpeza e Organização",
-    rating: 5.0,
-    reviews: 18,
-    location: "Boqueirão, Passo Fundo",
-    phone: "(54) 99999-3456",
-    image: "",
-    description:
-      "Limpeza residencial e comercial. Organização de ambientes e faxinas completas.",
-    price: "A partir de R$ 120/dia",
-    available: true,
-  },
-  {
-    id: "5",
-    name: "Roberto Lima",
-    service: "Jardinagem e Paisagismo",
-    category: "Jardinagem e Paisagismo",
-    rating: 4.6,
-    reviews: 28,
-    location: "Integração, Passo Fundo",
-    phone: "(54) 99999-7890",
-    image: "",
-    description:
-      "Criação e manutenção de jardins, poda de árvores e projetos paisagísticos.",
-    price: "A partir de R$ 150",
-    available: true,
-  },
-  {
-    id: "6",
-    name: "Fernanda Oliveira",
-    service: "Aulas Particulares de Matemática",
-    category: "Educação e Consultoria",
-    rating: 4.9,
-    reviews: 15,
-    location: "Universitário, Passo Fundo",
-    phone: "(54) 99999-2468",
-    image: "",
-    description:
-      "Professora formada em Matemática. Aulas para ensino fundamental e médio.",
-    price: "R$ 50/hora",
-    available: true,
-  },
-];
+// Tipo do prestador (deixa igual ao que o ServiceCard espera)
+interface ServiceProvider {
+  id: string;
+  name: string;
+  service: string;
+  category: string;
+  rating: number;
+  reviews: number;
+  location: string;
+  phone: string;
+  image: string;
+  description: string;
+  price: string;
+  available: boolean;
+  is_featured?: boolean; // opcional
+}
 
 const Index = () => {
   const navigate = useNavigate();
 
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [filteredProviders, setFilteredProviders] =
-    useState<typeof mockProviders>(mockProviders);
+
+  const [providers, setProviders] = useState<ServiceProvider[]>([]);
+  const [filteredProviders, setFilteredProviders] = useState<ServiceProvider[]>(
+    []
+  );
   const [searchQuery, setSearchQuery] = useState("");
+  const [loadingProviders, setLoadingProviders] = useState(true);
+  const [errorProviders, setErrorProviders] = useState<string | null>(null);
 
   useEffect(() => {
     // Listener de auth
@@ -150,17 +78,63 @@ const Index = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const fetchProviders = async () => {
+      setLoadingProviders(true);
+      setErrorProviders(null);
+
+      // Busca na tabela service_providers
+      const { data, error } = await supabase
+        .from("service_providers")
+        .select(
+          `
+          id,
+          name,
+          service,
+          category,
+          rating,
+          reviews,
+          location,
+          phone,
+          image,
+          description,
+          price,
+          available,
+          is_featured
+        `
+        )
+        // se quiser só destaques, mantenha; se quiser todos, remova essa linha
+        .eq("is_featured", true);
+
+      if (error) {
+        console.error("Erro ao buscar prestadores:", error);
+        setErrorProviders("Não foi possível carregar os prestadores.");
+        setLoadingProviders(false);
+        return;
+      }
+
+      const typedData = (data || []) as ServiceProvider[];
+      setProviders(typedData);
+      setFilteredProviders(typedData);
+      setLoadingProviders(false);
+    };
+
+    fetchProviders();
+  }, []);
+
   const handleSearch = (query: string, category: string, location: string) => {
-    let filtered = [...mockProviders];
+    let filtered = [...providers];
 
     if (query) {
       const q = query.toLowerCase();
-      filtered = filtered.filter(
-        (provider) =>
+      filtered = filtered.filter((provider) => {
+        const desc = provider.description ? provider.description.toLowerCase() : "";
+        return (
           provider.name.toLowerCase().includes(q) ||
           provider.service.toLowerCase().includes(q) ||
-          provider.description.toLowerCase().includes(q)
-      );
+          desc.includes(q)
+        );
+      });
     }
 
     if (category && category.toLowerCase() !== "todos os serviços") {
@@ -443,41 +417,58 @@ const Index = () => {
                       : "Prestadores em Destaque"}
                   </h2>
                   <p className="text-muted-foreground">
-                    {filteredProviders.length}{" "}
-                    {filteredProviders.length === 1
-                      ? "prestador encontrado"
-                      : "prestadores encontrados"}
+                    {loadingProviders
+                      ? "Carregando prestadores..."
+                      : `${filteredProviders.length} ${
+                          filteredProviders.length === 1
+                            ? "prestador encontrado"
+                            : "prestadores encontrados"
+                        }`}
                   </p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredProviders.map((provider) => (
-                  <ServiceCard key={provider.id} provider={provider} />
-                ))}
-              </div>
-
-              {filteredProviders.length === 0 && (
-                <div className="text-center py-16">
-                  <p className="text-lg text-muted-foreground mb-4">
-                    Nenhum prestador encontrado com os filtros selecionados.
-                  </p>
-                  <Button onClick={() => handleSearch("", "", "")} variant="outline">
-                    Ver todos os prestadores
-                  </Button>
+              {errorProviders && (
+                <div className="text-red-500 mb-6">
+                  {errorProviders}
                 </div>
               )}
+
+              {!loadingProviders && filteredProviders.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredProviders.map((provider) => (
+                    <ServiceCard key={provider.id} provider={provider} />
+                  ))}
+                </div>
+              )}
+
+              {!loadingProviders &&
+                filteredProviders.length === 0 &&
+                !errorProviders && (
+                  <div className="text-center py-16">
+                    <p className="text-lg text-muted-foreground mb-4">
+                      Nenhum prestador encontrado com os filtros selecionados.
+                    </p>
+                    <Button
+                      onClick={() => handleSearch("", "", "")}
+                      variant="outline"
+                    >
+                      Ver todos os prestadores
+                    </Button>
+                  </div>
+                )}
             </div>
           </section>
 
-          {/* CTA final – atualizado com 1 botão */}
+          {/* CTA final */}
           <section className="py-20 px-4 bg-gradient-hero">
             <div className="max-w-4xl mx-auto text-center text-white">
               <h2 className="text-3xl md:text-4xl font-bold mb-6">
                 Pronto para começar?
               </h2>
               <p className="text-xl mb-8 text-white/90">
-                Junte-se à nossa comunidade e encontre ou ofereça serviços na sua região.
+                Junte-se à nossa comunidade e encontre ou ofereça serviços na
+                sua região.
               </p>
               <div className="flex justify-center">
                 <Button

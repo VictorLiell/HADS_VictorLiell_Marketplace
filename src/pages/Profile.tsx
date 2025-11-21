@@ -4,18 +4,37 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, User, Mail, MapPin, Briefcase, FileText, LogOut } from "lucide-react";
+import {
+  ArrowLeft,
+  User,
+  Mail,
+  MapPin,
+  Briefcase,
+  FileText,
+  LogOut,
+  Star,
+} from "lucide-react";
 import { User as SupabaseUser, Session } from "@supabase/supabase-js";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Profile {
   id: string;
   user_id: string;
-  user_type: string;
+  user_type: string; // "provider" | "client"
   full_name: string | null;
   cpf: string;
   cnpj: string | null;
   services: string[] | null;
   location: string | null;
+  bio: string | null; // novo campo
+}
+
+interface Avaliacao {
+  id: string;
+  rating: number;
+  comentario: string | null;
+  created_at: string;
+  cliente_nome: string | null;
 }
 
 const Profile = () => {
@@ -26,20 +45,24 @@ const Profile = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-      }
-    );
+  const [bio, setBio] = useState("");
+  const [savingBio, setSavingBio] = useState(false);
+  const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
 
-    // THEN check for existing session
+  useEffect(() => {
+    // Listener de auth
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    // Sessão atual
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (!session) {
         navigate("/auth");
       }
@@ -63,7 +86,13 @@ const Profile = () => {
         .single();
 
       if (error) throw error;
+
       setProfile(data);
+      setBio(data.bio || "");
+
+      if (data.user_type === "provider") {
+        await loadAvaliacoes(data.id);
+      }
     } catch (error: any) {
       toast({
         title: "Erro ao carregar perfil",
@@ -72,6 +101,64 @@ const Profile = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAvaliacoes = async (prestadorProfileId: string) => {
+    const { data, error } = await supabase
+      .from("avaliacoes")
+      .select(
+        `
+        id,
+        rating,
+        comentario,
+        created_at,
+        cliente:profiles!avaliacoes_cliente_profile_id_fkey (full_name)
+      `
+      )
+      .eq("prestador_profile_id", prestadorProfileId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    const mapped: Avaliacao[] =
+      (data || []).map((row: any) => ({
+        id: row.id,
+        rating: row.rating,
+        comentario: row.comentario,
+        created_at: row.created_at,
+        cliente_nome: row.cliente?.full_name ?? null,
+      })) ?? [];
+
+    setAvaliacoes(mapped);
+  };
+
+  const handleSaveBio = async () => {
+    if (!profile) return;
+    try {
+      setSavingBio(true);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ bio })
+        .eq("id", profile.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Informações salvas",
+        description: "Seu texto foi atualizado com sucesso.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSavingBio(false);
     }
   };
 
@@ -100,14 +187,21 @@ const Profile = () => {
     );
   }
 
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
+        <p className="text-muted-foreground">Nenhum perfil encontrado.</p>
+      </div>
+    );
+  }
+
+  const isProvider = profile.user_type === "provider";
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Button
-            variant="ghost"
-            onClick={() => navigate("/")}
-          >
+          <Button variant="ghost" onClick={() => navigate("/")}>
             <ArrowLeft className="h-4 w-4 mr-2" />
             Voltar
           </Button>
@@ -122,20 +216,22 @@ const Profile = () => {
         <h1 className="text-3xl font-bold mb-6 text-foreground">Meu Perfil</h1>
 
         <Card className="p-6 space-y-6">
+          {/* Cabeçalho */}
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-8 w-8 text-primary" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-foreground">
-                {profile?.full_name || "Sem nome"}
+                {profile.full_name || "Sem nome"}
               </h2>
               <p className="text-sm text-muted-foreground">
-                {profile?.user_type === "provider" ? "Prestador de Serviços" : "Cliente"}
+                {isProvider ? "Prestador de Serviços" : "Cliente"}
               </p>
             </div>
           </div>
 
+          {/* Dados básicos (cliente e prestador) */}
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-foreground">
               <Mail className="h-5 w-5 text-muted-foreground" />
@@ -149,13 +245,13 @@ const Profile = () => {
               <FileText className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="text-sm text-muted-foreground">CPF</p>
-                <p>{profile?.cpf}</p>
+                <p>{profile.cpf}</p>
               </div>
             </div>
 
-            {profile?.user_type === "provider" && (
+            {isProvider && (
               <>
-                {profile?.cnpj && (
+                {profile.cnpj && (
                   <div className="flex items-center gap-3 text-foreground">
                     <FileText className="h-5 w-5 text-muted-foreground" />
                     <div>
@@ -165,21 +261,25 @@ const Profile = () => {
                   </div>
                 )}
 
-                {profile?.location && (
+                {profile.location && (
                   <div className="flex items-center gap-3 text-foreground">
                     <MapPin className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Localização</p>
+                      <p className="text-sm text-muted-foreground">
+                        Localização
+                      </p>
                       <p>{profile.location}</p>
                     </div>
                   </div>
                 )}
 
-                {profile?.services && profile.services.length > 0 && (
+                {profile.services && profile.services.length > 0 && (
                   <div className="flex items-start gap-3 text-foreground">
                     <Briefcase className="h-5 w-5 text-muted-foreground mt-1" />
                     <div className="flex-1">
-                      <p className="text-sm text-muted-foreground mb-2">Serviços</p>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Serviços
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {profile.services.map((service, index) => (
                           <span
@@ -196,6 +296,68 @@ const Profile = () => {
               </>
             )}
           </div>
+
+          {/* Só aparece para PRESTADOR */}
+          {isProvider && (
+            <div className="space-y-6 mt-6">
+              {/* Bio / Sobre o serviço */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  Sobre meu serviço
+                </p>
+                <Textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Descreva aqui seu trabalho, experiência, formas de atendimento..."
+                  rows={4}
+                />
+                <Button onClick={handleSaveBio} disabled={savingBio}>
+                  {savingBio ? "Salvando..." : "Salvar informações"}
+                </Button>
+              </div>
+
+              {/* Avaliações recebidas */}
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-foreground">
+                  Avaliações recebidas
+                </p>
+
+                {avaliacoes.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Você ainda não recebeu nenhuma avaliação.
+                  </p>
+                )}
+
+                {avaliacoes.map((av) => (
+                  <div
+                    key={av.id}
+                    className="border border-border rounded-lg p-3 space-y-1"
+                  >
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-yellow-500" />
+                      <span className="font-semibold">
+                        {av.rating.toFixed(1)} / 5
+                      </span>
+                    </div>
+                    {av.cliente_nome && (
+                      <p className="text-sm">
+                        <span className="font-medium">Cliente:</span>{" "}
+                        {av.cliente_nome}
+                      </p>
+                    )}
+                    {av.comentario && (
+                      <p className="text-sm text-foreground">
+                        {av.comentario}
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(av.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </Card>
       </div>
     </div>

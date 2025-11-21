@@ -86,7 +86,7 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // Sign up
+      // 🔹 Cria usuário de autenticação
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: providerData.email,
         password: providerData.password,
@@ -112,20 +112,51 @@ const Register = () => {
 
       if (!authData.user) throw new Error("Erro ao criar usuário");
 
-      // Perfil
-      const { error: profileError } = await supabase.from("profiles").insert({
-        user_id: authData.user.id,
-        user_type: "provider",
-        full_name: providerData.fullName,
-        cpf: providerData.cpf,
-        cnpj: providerData.cnpj || null,
-        phone: providerData.phone,
-        services: providerData.services,
-        location: providerData.location || null,
-      });
+      // 🔹 1) Cria o perfil do prestador e já recupera o registro criado
+      const { data: profileInsertData, error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          user_id: authData.user.id,
+          user_type: "provider",
+          full_name: providerData.fullName,
+          cpf: providerData.cpf,
+          cnpj: providerData.cnpj || null,
+          phone: providerData.phone,
+          services: providerData.services,
+          location: providerData.location || null,
+        })
+        .select("*")
+        .single();
 
       if (profileError) throw profileError;
+      if (!profileInsertData)
+        throw new Error("Não foi possível obter o perfil criado.");
 
+      // 🔹 Serviço principal (primeiro da lista)
+      const mainService = providerData.services[0] || "Serviços gerais";
+
+      // 🔹 2) Cria o registro na tabela service_providers (usada na Index)
+      const { error: providerError } = await supabase
+        .from("service_providers")
+        .insert({
+          profile_id: profileInsertData.id, // id da tabela profiles
+          name: providerData.fullName,
+          service: mainService,
+          category: mainService, // se quiser, depois você separa categoria de serviço
+          rating: 0,
+          reviews: 0,
+          location: providerData.location || "Passo Fundo",
+          phone: providerData.phone,
+          image: "",
+          description: "",
+          price: "A combinar",
+          available: true,
+          is_featured: true,
+        });
+
+      if (providerError) throw providerError;
+
+      // 🔹 3) Feedback e redirecionamento
       toast({
         title: "Cadastro realizado!",
         description: "Bem-vindo ao Marketplace Local.",
@@ -528,7 +559,9 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="client-phone">Número de Telefone *</Label>
+                  <Label htmlFor="client-phone">
+                    Número de Telefone *
+                  </Label>
                   <Input
                     id="client-phone"
                     type="tel"
