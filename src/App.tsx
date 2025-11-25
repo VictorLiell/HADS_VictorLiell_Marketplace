@@ -4,7 +4,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/auth";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
-import { ProviderReviewPage } from "./pages/ProviderReviewPage";
+import ProviderReviewPage from "./pages/ProviderReviewPage"; // ⭐ CORRETO AQUI
 
 const App = () => {
   return (
@@ -21,7 +21,6 @@ const App = () => {
         path="/prestadores/:providerId/avaliar"
         element={<ProviderReviewPage />}
       />
-
 
       <Route path="/login" element={<Auth />} />
       <Route path="/index" element={<Index />} />

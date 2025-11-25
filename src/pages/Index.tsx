@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 import { User as SupabaseUser, Session } from "@supabase/supabase-js";
-import { SearchSection } from "@/components/SearchSection";
+// ❌ REMOVIDO: import { SearchSection } from "@/components/SearchSection";
 import { ServiceCard } from "@/components/ServiceCard";
 
 import heroImage from "@/assets/hero-marketplace.jpg";
@@ -128,7 +128,9 @@ const Index = () => {
     if (query) {
       const q = query.toLowerCase();
       filtered = filtered.filter((provider) => {
-        const desc = provider.description ? provider.description.toLowerCase() : "";
+        const desc = provider.description
+          ? provider.description.toLowerCase()
+          : "";
         return (
           provider.name.toLowerCase().includes(q) ||
           provider.service.toLowerCase().includes(q) ||
@@ -399,12 +401,7 @@ const Index = () => {
             </div>
           </section>
 
-          {/* Busca */}
-          <section className="py-16 px-4">
-            <div className="max-w-6xl mx-auto">
-              <SearchSection onSearch={handleSearch} />
-            </div>
-          </section>
+          {/* ❌ Seção de busca removida (SearchSection) */}
 
           {/* Grid de serviços */}
           <section className="py-16 px-4 bg-muted/20">
@@ -429,9 +426,7 @@ const Index = () => {
               </div>
 
               {errorProviders && (
-                <div className="text-red-500 mb-6">
-                  {errorProviders}
-                </div>
+                <div className="text-red-500 mb-6">{errorProviders}</div>
               )}
 
               {!loadingProviders && filteredProviders.length > 0 && (
@@ -473,7 +468,7 @@ const Index = () => {
               <div className="flex justify-center">
                 <Button
                   size="lg"
-                  className="bg-white text-primary hover:bg-white/90 px-10 py-4 text-lg font-semibold rounded-xl"
+                  className="bg-white text-primary hover:bg_WHITE/90 px-10 py-4 text-lg font-semibold rounded-xl"
                   onClick={() => navigate("/register")}
                 >
                   Faça seu Cadastro

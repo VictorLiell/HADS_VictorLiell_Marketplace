@@ -1,97 +1,135 @@
- import { FormEvent, useState } from "react";
+import { FormEvent, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
-type ProviderReview = {
-  providerId: string;
-  serviceId?: string;
-  rating: number;
-  comment: string;
-};
-
-async function submitReview(review: ProviderReview): Promise<void> {
-  // Aqui você integra com sua API / backend / Supabase / etc.
-  // Exemplo genérico de POST:
-  await fetch("/api/reviews", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(review),
-  });
-}
-
-export const ProviderReviewPage = () => {
+const ProviderReviewPage = () => {
+  const navigate = useNavigate();
   const { providerId } = useParams<{ providerId: string }>();
   const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const serviceId = searchParams.get("serviceId") ?? undefined;
-
-  const [rating, setRating] = useState<number>(0);
-  const [comment, setComment] = useState<string>("");
+  const clientId = searchParams.get("clientId"); // cliente logado
+  const serviceId = searchParams.get("serviceId"); // opcional
+  
+  const [rating, setRating] = useState<number | "">("");
+  const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(false);
 
   if (!providerId) {
-    return <p>Prestador não informado.</p>;
+    return <div>Prestador não encontrado.</div>;
   }
 
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
 
-    const review: ProviderReview = {
-      providerId,
-      serviceId,
-      rating,
-      comment,
+    if (!rating) {
+      toast({
+        title: "Erro",
+        description: "Selecione uma nota.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!comment.trim()) {
+      toast({
+        title: "Erro",
+        description: "Escreva um comentário.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!clientId) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível identificar o cliente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    const payload = {
+      prestador_profile_id: providerId,
+      cliente_profile_id: clientId,
+      rating: Number(rating),
+      comment: comment.trim(),
+      service_id: serviceId ?? null,
     };
 
-    try {
-      await submitReview(review);
-      alert("Avaliação enviada com sucesso!");
-      navigate(-1); // volta para a tela anterior
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao enviar avaliação. Tente novamente.");
+    console.log("Enviando payload:", payload);
+
+    const { error } = await supabase.from("avaliacoes").insert(payload);
+
+    if (error) {
+      console.error("Erro ao inserir avaliação:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível enviar sua avaliação.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
     }
+
+    toast({
+      title: "Obrigado!",
+      description: "Sua avaliação foi registrada com sucesso.",
+    });
+
+    setLoading(false);
+    navigate(-1);
   };
 
   return (
-    <div style={{ maxWidth: 480, margin: "0 auto", padding: 16 }}>
-      <h1>Avaliar Prestador</h1>
-      {serviceId && <p>Serviço relacionado: {serviceId}</p>}
+    <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
+      <Card className="w-full max-w-lg p-6 space-y-4">
+        <h1 className="text-xl font-bold">Avaliar Prestador</h1>
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <label>
-            Nota (1 a 5):
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label>Nota (1 a 5)</Label>
             <select
-              value={rating || ""}
+              value={rating}
               onChange={(e) => setRating(Number(e.target.value))}
-              required
+              className="w-full border rounded-md px-2 py-2"
             >
-              <option value="" disabled>
-                Selecione
-              </option>
-              <option value={1}>1 - Péssimo</option>
+              <option value="">Selecione...</option>
+              <option value={1}>1 - Muito Ruim</option>
               <option value={2}>2 - Ruim</option>
               <option value={3}>3 - Regular</option>
               <option value={4}>4 - Bom</option>
               <option value={5}>5 - Excelente</option>
             </select>
-          </label>
-        </div>
+          </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <label>
-            Comentário:
-            <textarea
+          <div className="space-y-2">
+            <Label>Comentário</Label>
+            <Textarea
+              rows={4}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              rows={4}
-              style={{ width: "100%" }}
+              placeholder="Como foi o serviço?"
             />
-          </label>
-        </div>
+          </div>
 
-        <button type="submit">Enviar avaliação</button>
-      </form>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? "Enviando..." : "Enviar Avaliação"}
+            </Button>
+          </div>
+        </form>
+      </Card>
     </div>
   );
 };

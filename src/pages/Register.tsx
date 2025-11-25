@@ -21,10 +21,11 @@ const Register = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // 🔹 estados para mostrar/ocultar senha
+  // Controle de senha visível
   const [showProviderPassword, setShowProviderPassword] = useState(false);
   const [showClientPassword, setShowClientPassword] = useState(false);
 
+  // Prestador
   const [providerData, setProviderData] = useState({
     email: "",
     password: "",
@@ -36,6 +37,7 @@ const Register = () => {
     location: "",
   });
 
+  // Cliente
   const [clientData, setClientData] = useState({
     email: "",
     password: "",
@@ -55,6 +57,9 @@ const Register = () => {
     "Outros",
   ];
 
+  // ------------------------
+  // CADASTRO DO PRESTADOR
+  // ------------------------
   const handleProviderSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -68,7 +73,7 @@ const Register = () => {
       toast({
         title: "Campos obrigatórios",
         description:
-          "Email, nome completo, CPF, telefone e senha são obrigatórios",
+          "Email, nome, CPF, telefone e senha são obrigatórios.",
         variant: "destructive",
       });
       return;
@@ -77,7 +82,7 @@ const Register = () => {
     if (providerData.services.length === 0) {
       toast({
         title: "Serviços necessários",
-        description: "Selecione pelo menos um serviço",
+        description: "Selecione pelo menos um serviço.",
         variant: "destructive",
       });
       return;
@@ -86,22 +91,18 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // 🔹 Cria usuário de autenticação
+      // Criar usuário de autenticação (sem confirmação)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: providerData.email,
         password: providerData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
       });
 
-      // 🔹 Tratamento de email já cadastrado
       if (authError) {
-        if (authError.message?.includes("User already registered")) {
+        if (authError.message.includes("already registered")) {
           toast({
             title: "Email já cadastrado",
             description:
-              "Este email já está sendo usado. Faça login ou use outro email.",
+              "Este email já está sendo usado. Faça login ou use outro.",
             variant: "destructive",
           });
           setLoading(false);
@@ -112,7 +113,7 @@ const Register = () => {
 
       if (!authData.user) throw new Error("Erro ao criar usuário");
 
-      // 🔹 1) Cria o perfil do prestador e já recupera o registro criado
+      // Criar perfil
       const { data: profileInsertData, error: profileError } = await supabase
         .from("profiles")
         .insert({
@@ -129,20 +130,18 @@ const Register = () => {
         .single();
 
       if (profileError) throw profileError;
-      if (!profileInsertData)
-        throw new Error("Não foi possível obter o perfil criado.");
 
-      // 🔹 Serviço principal (primeiro da lista)
+      // Serviço principal (primeiro da lista)
       const mainService = providerData.services[0] || "Serviços gerais";
 
-      // 🔹 2) Cria o registro na tabela service_providers (usada na Index)
+      // service_providers
       const { error: providerError } = await supabase
         .from("service_providers")
         .insert({
-          profile_id: profileInsertData.id, // id da tabela profiles
+          profile_id: profileInsertData.id,
           name: providerData.fullName,
           service: mainService,
-          category: mainService, // se quiser, depois você separa categoria de serviço
+          category: mainService,
           rating: 0,
           reviews: 0,
           location: providerData.location || "Passo Fundo",
@@ -156,7 +155,6 @@ const Register = () => {
 
       if (providerError) throw providerError;
 
-      // 🔹 3) Feedback e redirecionamento
       toast({
         title: "Cadastro realizado!",
         description: "Bem-vindo ao Marketplace Local.",
@@ -174,6 +172,9 @@ const Register = () => {
     }
   };
 
+  // ------------------------
+  // CADASTRO DO CLIENTE
+  // ------------------------
   const handleClientSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -187,7 +188,7 @@ const Register = () => {
       toast({
         title: "Campos obrigatórios",
         description:
-          "Email, nome completo, CPF, telefone e senha são obrigatórios",
+          "Email, nome completo, CPF, telefone e senha são obrigatórios.",
         variant: "destructive",
       });
       return;
@@ -196,18 +197,13 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // Sign up
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: clientData.email,
         password: clientData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
-        },
       });
 
-      // 🔹 Tratamento de email já cadastrado
       if (authError) {
-        if (authError.message?.includes("User already registered")) {
+        if (authError.message.includes("already registered")) {
           toast({
             title: "Email já cadastrado",
             description:
@@ -222,7 +218,7 @@ const Register = () => {
 
       if (!authData.user) throw new Error("Erro ao criar usuário");
 
-      // Perfil
+      // Criar perfil
       const { error: profileError } = await supabase.from("profiles").insert({
         user_id: authData.user.id,
         user_type: "client",
@@ -259,6 +255,9 @@ const Register = () => {
     }));
   };
 
+  // ------------------------
+  // UI
+  // ------------------------
   return (
     <div className="min-h-screen bg-gradient-to-br from-accent/20 via-background to-primary/10 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-xl">
@@ -283,13 +282,12 @@ const Register = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* TAB PRESTADOR */}
+            {/* Prestador */}
             <TabsContent value="provider">
               <form onSubmit={handleProviderSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="provider-email">Email *</Label>
+                  <Label>Email *</Label>
                   <Input
-                    id="provider-email"
                     type="email"
                     value={providerData.email}
                     onChange={(e) =>
@@ -298,16 +296,15 @@ const Register = () => {
                         email: e.target.value,
                       })
                     }
-                    placeholder="seu@email.com"
+                    placeholder="email@email.com"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="provider-password">Senha *</Label>
+                  <Label>Senha *</Label>
                   <div className="relative">
                     <Input
-                      id="provider-password"
                       type={showProviderPassword ? "text" : "password"}
                       value={providerData.password}
                       onChange={(e) =>
@@ -336,9 +333,8 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="provider-name">Nome Completo *</Label>
+                  <Label>Nome Completo *</Label>
                   <Input
-                    id="provider-name"
                     value={providerData.fullName}
                     onChange={(e) =>
                       setProviderData({
@@ -346,15 +342,13 @@ const Register = () => {
                         fullName: e.target.value,
                       })
                     }
-                    placeholder="Seu nome completo"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="provider-cpf">CPF *</Label>
+                  <Label>CPF *</Label>
                   <Input
-                    id="provider-cpf"
                     value={providerData.cpf}
                     onChange={(e) =>
                       setProviderData({
@@ -362,15 +356,13 @@ const Register = () => {
                         cpf: e.target.value,
                       })
                     }
-                    placeholder="000.000.000-00"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="provider-cnpj">CNPJ (Opcional)</Label>
+                  <Label>CNPJ (opcional)</Label>
                   <Input
-                    id="provider-cnpj"
                     value={providerData.cnpj}
                     onChange={(e) =>
                       setProviderData({
@@ -378,15 +370,12 @@ const Register = () => {
                         cnpj: e.target.value,
                       })
                     }
-                    placeholder="00.000.000/0000-00"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="provider-phone">Número de Telefone *</Label>
+                  <Label>Telefone *</Label>
                   <Input
-                    id="provider-phone"
-                    type="tel"
                     value={providerData.phone}
                     onChange={(e) =>
                       setProviderData({
@@ -394,17 +383,13 @@ const Register = () => {
                         phone: e.target.value,
                       })
                     }
-                    placeholder="(00) 00000-0000"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="provider-location">
-                    Onde você atende?
-                  </Label>
+                  <Label>Localização</Label>
                   <Input
-                    id="provider-location"
                     value={providerData.location}
                     onChange={(e) =>
                       setProviderData({
@@ -412,44 +397,29 @@ const Register = () => {
                         location: e.target.value,
                       })
                     }
-                    placeholder="Cidade, bairro ou região"
+                    placeholder="Cidade ou bairro"
                   />
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Serviços que você oferece *</Label>
+                  <Label>Serviços *</Label>
                   <div className="grid grid-cols-2 gap-3">
                     {serviceOptions.map((service) => (
-                      <div
-                        key={service}
-                        className="flex items-center space-x-2"
-                      >
+                      <div key={service} className="flex items-center space-x-2">
                         <Checkbox
-                          id={service}
                           checked={providerData.services.includes(service)}
                           onCheckedChange={() => toggleService(service)}
                         />
-                        <label
-                          htmlFor={service}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                        >
-                          {service}
-                        </label>
+                        <label className="text-sm cursor-pointer">{service}</label>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  size="lg"
-                  disabled={loading}
-                >
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Cadastrando..." : "Cadastrar como Prestador"}
                 </Button>
 
-                {/* BLOCO INTEGRADO: ENTRAR + VOLTAR */}
                 <div className="pt-4 space-y-3 text-center border-t mt-4">
                   <p className="text-sm text-muted-foreground">
                     Já possui uma conta?
@@ -474,40 +444,30 @@ const Register = () => {
               </form>
             </TabsContent>
 
-            {/* TAB CLIENTE */}
+            {/* Cliente */}
             <TabsContent value="client">
               <form onSubmit={handleClientSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="client-email">Email *</Label>
+                  <Label>Email *</Label>
                   <Input
-                    id="client-email"
                     type="email"
                     value={clientData.email}
                     onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        email: e.target.value,
-                      })
+                      setClientData({ ...clientData, email: e.target.value })
                     }
-                    placeholder="seu@email.com"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="client-password">Senha *</Label>
+                  <Label>Senha *</Label>
                   <div className="relative">
                     <Input
-                      id="client-password"
                       type={showClientPassword ? "text" : "password"}
                       value={clientData.password}
                       onChange={(e) =>
-                        setClientData({
-                          ...clientData,
-                          password: e.target.value,
-                        })
+                        setClientData({ ...clientData, password: e.target.value })
                       }
-                      placeholder="••••••••"
                       required
                     />
                     <button
@@ -527,66 +487,42 @@ const Register = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="client-name">Nome Completo *</Label>
+                  <Label>Nome Completo *</Label>
                   <Input
-                    id="client-name"
                     value={clientData.fullName}
                     onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        fullName: e.target.value,
-                      })
+                      setClientData({ ...clientData, fullName: e.target.value })
                     }
-                    placeholder="Seu nome completo"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="client-cpf">CPF *</Label>
+                  <Label>CPF *</Label>
                   <Input
-                    id="client-cpf"
                     value={clientData.cpf}
                     onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        cpf: e.target.value,
-                      })
+                      setClientData({ ...clientData, cpf: e.target.value })
                     }
-                    placeholder="000.000.000-00"
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="client-phone">
-                    Número de Telefone *
-                  </Label>
+                  <Label>Telefone *</Label>
                   <Input
-                    id="client-phone"
-                    type="tel"
                     value={clientData.phone}
                     onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        phone: e.target.value,
-                      })
+                      setClientData({ ...clientData, phone: e.target.value })
                     }
-                    placeholder="(00) 00000-0000"
                     required
                   />
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full"
-                  size="lg"
-                  disabled={loading}
-                >
+                <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Cadastrando..." : "Cadastrar como Cliente"}
                 </Button>
 
-                {/* BLOCO INTEGRADO: ENTRAR + VOLTAR */}
                 <div className="pt-4 space-y-3 text-center border-t mt-4">
                   <p className="text-sm text-muted-foreground">
                     Já possui uma conta?
