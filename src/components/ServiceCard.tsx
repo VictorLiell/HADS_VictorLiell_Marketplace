@@ -1,11 +1,10 @@
- import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -33,6 +32,7 @@ interface ServiceProvider {
   description: string;
   price: string;
   available: boolean;
+  is_featured?: boolean;
 }
 
 interface ServiceCardProps {
@@ -41,150 +41,184 @@ interface ServiceCardProps {
 
 export const ServiceCard = ({ provider }: ServiceCardProps) => {
   const { toast } = useToast();
-  const [open, setOpen] = useState(false);
+  const [openContact, setOpenContact] = useState(false);
 
-  const phoneDigits = provider.phone.replace(/[^0-9]/g, "");
-  const telLink = `tel:${phoneDigits}`;
-  const whatsappLink = `https://wa.me/55${phoneDigits}`;
+  // ✅ Função COMPLETA – copiar telefone com fallback
+  const handleCopyPhone = async () => {
+    const phone = provider.phone;
 
-  const copyPhone = () => {
-    navigator.clipboard.writeText(provider.phone);
-    toast({
-      title: "Número copiado!",
-      description: `${provider.phone} foi copiado para sua área de transferência.`
-    });
+    try {
+      // Navegadores modernos
+      await navigator.clipboard.writeText(phone);
+
+      toast({
+        title: "Telefone copiado!",
+        description: `${phone} foi copiado para a área de transferência.`,
+      });
+    } catch (err) {
+      // Fallback para navegadores antigos ou bloqueados
+      const textArea = document.createElement("textarea");
+      textArea.value = phone;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand("copy");
+
+        toast({
+          title: "Telefone copiado!",
+          description: `${phone} foi copiado para a área de transferência.`,
+        });
+      } catch {
+        toast({
+          title: "Erro ao copiar telefone",
+          description: "Seu navegador não permitiu copiar automaticamente.",
+          variant: "destructive",
+        });
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+  };
+
+  // Abrir WhatsApp
+  const handleWhatsApp = () => {
+    const msg = encodeURIComponent(
+      `Olá ${provider.name}, encontrei seu serviço no Marketplace Local e gostaria de mais informações.`
+    );
+    const phone = provider.phone.replace(/\D/g, ""); // remove tudo que não é número
+    window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
   };
 
   return (
     <>
-      <Card className="group hover:shadow-card-hover transition-all duration-300 transform hover:scale-[1.02] bg-gradient-card">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white font-bold text-lg">
-                {provider.name
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .slice(0, 2)}
-              </div>
-              <div>
-                <CardTitle className="text-lg">{provider.name}</CardTitle>
-                <CardDescription className="flex items-center gap-1 text-sm">
-                  <MapPin className="h-3 w-3" />
-                  {provider.location}
-                </CardDescription>
-              </div>
-            </div>
-
-            <Badge
-              variant={provider.available ? "default" : "secondary"}
-              className="text-xs"
-            >
-              {provider.available ? "Disponível" : "Ocupado"}
-            </Badge>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
+      <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
+        {/* Cabeçalho */}
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div>
-            <h3 className="font-semibold text-primary">{provider.service}</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {provider.description}
-            </p>
-          </div>
+            <CardTitle className="flex items-center gap-2">
+              {provider.name}
+              {provider.is_featured && (
+                <Badge variant="default" className="text-xs">
+                  Destaque
+                </Badge>
+              )}
+            </CardTitle>
+            <CardDescription>{provider.service}</CardDescription>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
-              <span className="text-sm font-medium">{provider.rating}</span>
-              <span className="text-xs text-muted-foreground">
-                ({provider.reviews} avaliações)
+            <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
+              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+              <span>
+                {provider.rating.toFixed(1)} • {provider.reviews}{" "}
+                {provider.reviews === 1 ? "avaliação" : "avaliações"}
               </span>
             </div>
-            <span className="font-semibold text-primary">
-              {provider.price}
-            </span>
           </div>
 
-          {/* Botões lado a lado: Ver Contato + Avaliar serviço */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={() => setOpen(true)}
-            >
-              <Phone className="h-4 w-4" />
-              Ver Contato
+          {/* Preço */}
+          {provider.price && (
+            <div className="text-right">
+              <span className="block text-xs text-muted-foreground">
+                Valor médio
+              </span>
+              <span className="text-lg font-semibold text-primary">
+                {provider.price}
+              </span>
+            </div>
+          )}
+        </CardHeader>
+
+        {/* Conteúdo */}
+        <CardContent className="flex-1 flex flex-col gap-4">
+          {provider.description && (
+            <p className="text-sm text-muted-foreground line-clamp-3">
+              {provider.description}
+            </p>
+          )}
+
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="w-4 h-4" />
+            <span>{provider.location}</span>
+          </div>
+
+          {/* Ações */}
+          <div className="mt-auto flex flex-col gap-2">
+            <Button className="w-full" onClick={() => setOpenContact(true)}>
+              <Phone className="w-4 h-4 mr-2" />
+              Ver dados de contato
             </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full sm:w-auto"
-              asChild
-            >
-              <Link to={`/prestadores/${provider.id}/avaliar`}>
-                Avaliar serviço
-              </Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-1/2"
+                onClick={handleCopyPhone}
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                Copiar telefone
+              </Button>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-1/2"
+                onClick={handleWhatsApp}
+              >
+                <MessageCircle className="w-4 h-4 mr-2" />
+                WhatsApp
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* MODAL DE CONTATO */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-sm">
+      {/* Dialog */}
+      <Dialog open={openContact} onOpenChange={setOpenContact}>
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>Contato do Prestador</DialogTitle>
+            <DialogTitle>Contato do prestador</DialogTitle>
             <DialogDescription>
-              Informações de contato de <strong>{provider.name}</strong>.
+              Combine diretamente com o profissional.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-3 text-sm">
             <div>
-              <p className="text-sm text-muted-foreground">Telefone:</p>
-              <p className="text-lg font-semibold">{provider.phone}</p>
+              <span className="font-semibold">Nome: </span>
+              {provider.name}
             </div>
-
-            <div className="flex flex-col gap-2">
-              {/* Botão Ligar */}
-              <Button asChild variant="default">
-                <a href={telLink} className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  Ligar Agora
-                </a>
-              </Button>
-
-              {/* Botão WhatsApp */}
-              <Button asChild variant="secondary">
-                <a
-                  href={whatsappLink}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  WhatsApp
-                </a>
-              </Button>
-
-              {/* Botão Copiar */}
-              <Button
-                variant="outline"
-                onClick={copyPhone}
-                className="flex items-center gap-2"
-              >
-                <Copy className="h-4 w-4" />
-                Copiar Número
-              </Button>
+            <div>
+              <span className="font-semibold">Serviço: </span>
+              {provider.service}
+            </div>
+            {provider.price && (
+              <div>
+                <span className="font-semibold">Valor médio: </span>
+                {provider.price}
+              </div>
+            )}
+            <div>
+              <span className="font-semibold">Telefone: </span>
+              {provider.phone}
+            </div>
+            <div>
+              <span className="font-semibold">Localização: </span>
+              {provider.location}
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="ghost" onClick={() => setOpen(false)}>
-              Fechar
+          <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+            <Button variant="outline" onClick={handleCopyPhone}>
+              <Copy className="w-4 h-4 mr-2" />
+              Copiar telefone
+            </Button>
+            <Button onClick={handleWhatsApp}>
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Conversar no WhatsApp
             </Button>
           </DialogFooter>
         </DialogContent>

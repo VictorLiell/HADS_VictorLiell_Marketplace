@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { User as SupabaseUser, Session } from "@supabase/supabase-js";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input"; // 👈 para editar o preço
 
 interface Profile {
   id: string;
@@ -26,7 +27,7 @@ interface Profile {
   cnpj: string | null;
   services: string[] | null;
   location: string | null;
-  bio: string | null; // novo campo
+  bio: string | null;
 }
 
 interface Avaliacao {
@@ -46,8 +47,12 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
 
   const [bio, setBio] = useState("");
+  const [price, setPrice] = useState(""); // 👈 novo estado para o valor
   const [savingBio, setSavingBio] = useState(false);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+
+  // id do registro em service_providers
+  const [providerId, setProviderId] = useState<string | null>(null);
 
   useEffect(() => {
     // Listener de auth
@@ -76,33 +81,6 @@ const Profile = () => {
       loadProfile();
     }
   }, [user]);
-
-  const loadProfile = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("user_id", user?.id)
-        .single();
-
-      if (error) throw error;
-
-      setProfile(data);
-      setBio(data.bio || "");
-
-      if (data.user_type === "provider") {
-        await loadAvaliacoes(data.id);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Erro ao carregar perfil",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadAvaliacoes = async (prestadorProfileId: string) => {
     const { data, error } = await supabase
@@ -136,20 +114,87 @@ const Profile = () => {
     setAvaliacoes(mapped);
   };
 
+  const loadProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", user?.id)
+        .single();
+
+      if (error) throw error;
+
+      setProfile(data);
+
+      // bio padrão vem de profiles.bio
+      let bioToUse = data.bio || "";
+      let priceToUse = "";
+
+      if (data.user_type === "provider") {
+        // busca o registro do prestador em service_providers
+        const { data: providerData, error: providerError } = await supabase
+          .from("service_providers")
+          .select("id, description, price")
+          .eq("profile_id", data.id)
+          .single();
+
+        if (!providerError && providerData) {
+          setProviderId(providerData.id);
+
+          if (providerData.description) {
+            bioToUse = providerData.description;
+          }
+          if (providerData.price) {
+            priceToUse = providerData.price;
+          }
+        }
+
+        await loadAvaliacoes(data.id);
+      }
+
+      setBio(bioToUse);
+      setPrice(priceToUse);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar perfil",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSaveBio = async () => {
     if (!profile) return;
+
     try {
       setSavingBio(true);
-      const { error } = await supabase
+
+      // 1) Atualiza profiles.bio
+      const { error: profileError } = await supabase
         .from("profiles")
         .update({ bio })
         .eq("id", profile.id);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // 2) Se for prestador, também atualiza service_providers.description e price
+      if (profile.user_type === "provider" && providerId) {
+        const { error: providerError } = await supabase
+          .from("service_providers")
+          .update({
+            description: bio,
+            price: price || "A combinar",
+          })
+          .eq("id", providerId);
+
+        if (providerError) throw providerError;
+      }
 
       toast({
         title: "Informações salvas",
-        description: "Seu texto foi atualizado com sucesso.",
+        description: "Seu texto e valor foram atualizados com sucesso.",
       });
     } catch (error: any) {
       toast({
@@ -231,7 +276,7 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Dados básicos (cliente e prestador) */}
+          {/* Dados básicos */}
           <div className="space-y-4">
             <div className="flex items-center gap-3 text-foreground">
               <Mail className="h-5 w-5 text-muted-foreground" />
@@ -297,11 +342,11 @@ const Profile = () => {
             )}
           </div>
 
-          {/* Só aparece para PRESTADOR */}
+          {/* Área específica do prestador */}
           {isProvider && (
             <div className="space-y-6 mt-6">
-              {/* Bio / Sobre o serviço */}
-              <div className="space-y-2">
+              {/* Sobre meu serviço + preço */}
+              <div className="space-y-3">
                 <p className="text-sm font-medium text-foreground">
                   Sobre meu serviço
                 </p>
@@ -311,6 +356,21 @@ const Profile = () => {
                   placeholder="Descreva aqui seu trabalho, experiência, formas de atendimento..."
                   rows={4}
                 />
+
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-foreground">
+                    Valor médio do serviço
+                  </p>
+                  <Input
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                    placeholder="Ex: R$ 150,00"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Esse valor aparecerá nos cards do seu serviço.
+                  </p>
+                </div>
+
                 <Button onClick={handleSaveBio} disabled={savingBio}>
                   {savingBio ? "Salvando..." : "Salvar informações"}
                 </Button>

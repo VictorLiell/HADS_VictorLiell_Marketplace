@@ -58,6 +58,9 @@ const Index = () => {
   const [loadingProviders, setLoadingProviders] = useState(true);
   const [errorProviders, setErrorProviders] = useState<string | null>(null);
 
+  // 👇👇 ADICIONADO: estado da cidade
+  const [selectedCity, setSelectedCity] = useState("todas");
+
   useEffect(() => {
     // Listener de auth
     const {
@@ -103,7 +106,6 @@ const Index = () => {
           is_featured
         `
         )
-        // se quiser só destaques, mantenha; se quiser todos, remova essa linha
         .eq("is_featured", true);
 
       if (error) {
@@ -116,11 +118,34 @@ const Index = () => {
       const typedData = (data || []) as ServiceProvider[];
       setProviders(typedData);
       setFilteredProviders(typedData);
+
+      // 👇👇 ADICIONADO: aplica filtro inicial pela cidade
+      if (selectedCity !== "todas") {
+        setFilteredProviders(
+          typedData.filter((p) =>
+            p.location?.toLowerCase().includes("passo fundo")
+          )
+        );
+      }
+
       setLoadingProviders(false);
     };
 
     fetchProviders();
   }, []);
+
+  // 👇👇 ADICIONADO: filtra automaticamente ao trocar a cidade
+  useEffect(() => {
+    if (selectedCity === "todas") {
+      setFilteredProviders(providers);
+    } else {
+      setFilteredProviders(
+        providers.filter((p) =>
+          p.location?.toLowerCase().includes("passo fundo")
+        )
+      );
+    }
+  }, [selectedCity, providers]);
 
   const handleSearch = (query: string, category: string, location: string) => {
     let filtered = [...providers];
@@ -182,7 +207,7 @@ const Index = () => {
               confiável e na sua vizinhança.
             </p>
 
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
+            <p className="text-lg text-white max-w-2xl mx-auto mb-8">
               Conectando você aos melhores profissionais da sua região.
             </p>
 
@@ -422,6 +447,22 @@ const Index = () => {
                             : "prestadores encontrados"
                         }`}
                   </p>
+
+                  {/* 👇👇 ADICIONADO: SELECT DE CIDADE */}
+                  <div className="mt-4">
+                    <label className="text-sm text-muted-foreground mr-2">
+                      Filtrar cidade:
+                    </label>
+
+                    <select
+                      value={selectedCity}
+                      onChange={(e) => setSelectedCity(e.target.value)}
+                      className="px-3 py-2 bg-card border rounded-md"
+                    >
+                      <option value="todas">Todas</option>
+                      <option value="passo fundo">Passo Fundo</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
