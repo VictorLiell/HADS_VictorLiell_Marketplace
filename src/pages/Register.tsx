@@ -36,7 +36,7 @@ const Register = () => {
     services: [] as string[],
     location: "",
     price: "",
-    city: "Passo Fundo", // 👈 NOVO CAMPO ADICIONADO
+    city: "Passo Fundo", // 👈 sempre começa como Passo Fundo
   });
 
   // Cliente
@@ -93,7 +93,7 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // Criar usuário de autenticação
+      // Criar usuário de autenticação (sem confirmação)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: providerData.email,
         password: providerData.password,
@@ -126,17 +126,17 @@ const Register = () => {
           cnpj: providerData.cnpj || null,
           phone: providerData.phone,
           services: providerData.services,
-          location: providerData.city, // 👈 SALVA A CIDADE
+          location: providerData.city, // 👈 salva cidade no profiles.location
         })
         .select("*")
         .single();
 
       if (profileError) throw profileError;
 
-      // Serviço principal
+      // Serviço principal (primeiro da lista)
       const mainService = providerData.services[0] || "Serviços gerais";
 
-      // Inserir em service_providers
+      // service_providers
       const { error: providerError } = await supabase
         .from("service_providers")
         .insert({
@@ -146,7 +146,7 @@ const Register = () => {
           category: mainService,
           rating: 0,
           reviews: 0,
-          location: providerData.city, // 👈 CIDADE TAMBÉM AQUI
+          location: providerData.city, // 👈 cidade também aqui
           phone: providerData.phone,
           image: "",
           description: "",
@@ -220,6 +220,7 @@ const Register = () => {
 
       if (!authData.user) throw new Error("Erro ao criar usuário");
 
+      // Criar perfil
       const { error: profileError } = await supabase.from("profiles").insert({
         user_id: authData.user.id,
         user_type: "client",
@@ -270,7 +271,6 @@ const Register = () => {
             Conectando pessoas e serviços
           </CardDescription>
         </CardHeader>
-
         <CardContent>
           <Tabs defaultValue="provider" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
@@ -278,7 +278,6 @@ const Register = () => {
                 <Store className="w-4 h-4" />
                 Seja um Prestador
               </TabsTrigger>
-
               <TabsTrigger value="client" className="flex items-center gap-2">
                 <User className="w-4 h-4" />
                 Ser Cliente
@@ -288,8 +287,6 @@ const Register = () => {
             {/* Prestador */}
             <TabsContent value="provider">
               <form onSubmit={handleProviderSubmit} className="space-y-4">
-
-                {/* Email */}
                 <div className="space-y-2">
                   <Label>Email *</Label>
                   <Input
@@ -301,11 +298,11 @@ const Register = () => {
                         email: e.target.value,
                       })
                     }
+                    placeholder="email@email.com"
                     required
                   />
                 </div>
 
-                {/* Senha */}
                 <div className="space-y-2">
                   <Label>Senha *</Label>
                   <div className="relative">
@@ -318,6 +315,7 @@ const Register = () => {
                           password: e.target.value,
                         })
                       }
+                      placeholder="••••••••"
                       required
                     />
                     <button
@@ -325,7 +323,7 @@ const Register = () => {
                       onClick={() =>
                         setShowProviderPassword((prev) => !prev)
                       }
-                      className="absolute inset-y-0 right-3 flex items-center"
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
                     >
                       {showProviderPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -336,7 +334,6 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* Nome */}
                 <div className="space-y-2">
                   <Label>Nome Completo *</Label>
                   <Input
@@ -351,7 +348,6 @@ const Register = () => {
                   />
                 </div>
 
-                {/* CPF */}
                 <div className="space-y-2">
                   <Label>CPF *</Label>
                   <Input
@@ -366,7 +362,6 @@ const Register = () => {
                   />
                 </div>
 
-                {/* CNPJ opcional */}
                 <div className="space-y-2">
                   <Label>CNPJ (opcional)</Label>
                   <Input
@@ -380,7 +375,6 @@ const Register = () => {
                   />
                 </div>
 
-                {/* Telefone */}
                 <div className="space-y-2">
                   <Label>Telefone *</Label>
                   <Input
@@ -395,7 +389,7 @@ const Register = () => {
                   />
                 </div>
 
-                {/* CIDADE — ADICIONADO */}
+                {/* Cidade - apenas Passo Fundo */}
                 <div className="space-y-2">
                   <Label>Cidade *</Label>
                   <select
@@ -409,16 +403,11 @@ const Register = () => {
                     className="w-full p-2 border rounded-md bg-background"
                   >
                     <option value="Passo Fundo">Passo Fundo</option>
-                    <option value="Sarandi">Sarandi</option>
-                    <option value="Marau">Marau</option>
-                    <option value="Carazinho">Carazinho</option>
-                    <option value="Não-Me-Toque">Não-Me-Toque</option>
                   </select>
                 </div>
 
-                {/* LOCALIZAÇÃO (continua igual — não removi nada) */}
                 <div className="space-y-2">
-                  <Label>Bairro / Localização</Label>
+                  <Label>Localização</Label>
                   <Input
                     value={providerData.location}
                     onChange={(e) =>
@@ -427,13 +416,13 @@ const Register = () => {
                         location: e.target.value,
                       })
                     }
-                    placeholder="Centro, Petrópolis, etc."
+                    placeholder="Bairro ou região (ex: Centro)"
                   />
                 </div>
 
-                {/* Preço */}
+                {/* 💸 Campo de preço */}
                 <div className="space-y-2">
-                  <Label>Valor médio</Label>
+                  <Label>Valor médio do serviço</Label>
                   <Input
                     value={providerData.price}
                     onChange={(e) =>
@@ -444,9 +433,11 @@ const Register = () => {
                     }
                     placeholder="Ex: R$ 150,00"
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Você pode colocar um valor fixo ou faixa de preço (ex: R$ 80,00 / hora).
+                  </p>
                 </div>
 
-                {/* Serviços */}
                 <div className="space-y-3">
                   <Label>Serviços *</Label>
                   <div className="grid grid-cols-2 gap-3">
@@ -495,23 +486,18 @@ const Register = () => {
             {/* Cliente */}
             <TabsContent value="client">
               <form onSubmit={handleClientSubmit} className="space-y-4">
-                {/* Email */}
                 <div className="space-y-2">
                   <Label>Email *</Label>
                   <Input
                     type="email"
                     value={clientData.email}
                     onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        email: e.target.value,
-                      })
+                      setClientData({ ...clientData, email: e.target.value })
                     }
                     required
                   />
                 </div>
 
-                {/* Senha */}
                 <div className="space-y-2">
                   <Label>Senha *</Label>
                   <div className="relative">
@@ -519,10 +505,7 @@ const Register = () => {
                       type={showClientPassword ? "text" : "password"}
                       value={clientData.password}
                       onChange={(e) =>
-                        setClientData({
-                          ...clientData,
-                          password: e.target.value,
-                        })
+                        setClientData({ ...clientData, password: e.target.value })
                       }
                       required
                     />
@@ -531,7 +514,7 @@ const Register = () => {
                       onClick={() =>
                         setShowClientPassword((prev) => !prev)
                       }
-                      className="absolute inset-y-0 right-3 flex items-center"
+                      className="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
                     >
                       {showClientPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -542,46 +525,34 @@ const Register = () => {
                   </div>
                 </div>
 
-                {/* Nome */}
                 <div className="space-y-2">
                   <Label>Nome Completo *</Label>
                   <Input
                     value={clientData.fullName}
                     onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        fullName: e.target.value,
-                      })
+                      setClientData({ ...clientData, fullName: e.target.value })
                     }
                     required
                   />
                 </div>
 
-                {/* CPF */}
                 <div className="space-y-2">
                   <Label>CPF *</Label>
                   <Input
                     value={clientData.cpf}
                     onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        cpf: e.target.value,
-                      })
+                      setClientData({ ...clientData, cpf: e.target.value })
                     }
                     required
                   />
                 </div>
 
-                {/* Telefone */}
                 <div className="space-y-2">
                   <Label>Telefone *</Label>
                   <Input
                     value={clientData.phone}
                     onChange={(e) =>
-                      setClientData({
-                        ...clientData,
-                        phone: e.target.value,
-                      })
+                      setClientData({ ...clientData, phone: e.target.value })
                     }
                     required
                   />
@@ -603,7 +574,6 @@ const Register = () => {
                   >
                     Entrar
                   </Button>
-
                   <Button
                     type="button"
                     variant="ghost"
@@ -615,7 +585,6 @@ const Register = () => {
                 </div>
               </form>
             </TabsContent>
-
           </Tabs>
         </CardContent>
       </Card>

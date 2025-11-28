@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -18,6 +19,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User as SupabaseUser } from "@supabase/supabase-js";
 
 interface ServiceProvider {
   id: string;
@@ -41,7 +44,42 @@ interface ServiceCardProps {
 
 export const ServiceCard = ({ provider }: ServiceCardProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [openContact, setOpenContact] = useState(false);
+
+  // 🔐 Info do usuário logado
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [userType, setUserType] = useState<"client" | "provider" | null>(null);
+  const [loadingUserType, setLoadingUserType] = useState(true);
+
+  useEffect(() => {
+    const loadUserType = async () => {
+      const { data } = await supabase.auth.getSession();
+      const currentSession = data.session;
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
+      if (!currentSession?.user) {
+        setLoadingUserType(false);
+        return;
+      }
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("user_id", currentSession.user.id)
+        .single();
+
+      if (!error && profile) {
+        setUserType(profile.user_type as "client" | "provider");
+      }
+
+      setLoadingUserType(false);
+    };
+
+    loadUserType();
+  }, []);
 
   // ✅ Função COMPLETA – copiar telefone com fallback
   const handleCopyPhone = async () => {
@@ -91,6 +129,10 @@ export const ServiceCard = ({ provider }: ServiceCardProps) => {
     );
     const phone = provider.phone.replace(/\D/g, ""); // remove tudo que não é número
     window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
+  };
+
+  const handleGoToReviews = () => {
+    navigate(`/prestadores/${provider.id}/avaliar`);
   };
 
   return (
@@ -172,6 +214,64 @@ export const ServiceCard = ({ provider }: ServiceCardProps) => {
                 WhatsApp
               </Button>
             </div>
+
+            {/* 🔥 Botão de avaliação com comportamento por tipo de usuário */}
+            {!loadingUserType && (
+              <>
+                {/* Não logado */}
+                {!user && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full opacity-60 cursor-not-allowed"
+                    onClick={() =>
+                      toast({
+                        title: "Faça login como cliente",
+                        description:
+                          "Entre com uma conta de cliente para avaliar um prestador.",
+                        variant: "destructive",
+                      })
+                    }
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Faça login como cliente para avaliar
+                  </Button>
+                )}
+
+                {/* Logado como prestador */}
+                {user && userType === "provider" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full opacity-60 cursor-not-allowed"
+                    onClick={() =>
+                      toast({
+                        title: "Apenas clientes podem avaliar",
+                        description:
+                          "Use uma conta de cliente para avaliar prestadores.",
+                        variant: "destructive",
+                      })
+                    }
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Apenas clientes podem avaliar
+                  </Button>
+                )}
+
+                {/* Logado como cliente */}
+                {user && userType === "client" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={handleGoToReviews}
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Ver avaliações / Avaliar
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -220,6 +320,58 @@ export const ServiceCard = ({ provider }: ServiceCardProps) => {
               <MessageCircle className="w-4 h-4 mr-2" />
               Conversar no WhatsApp
             </Button>
+
+            {/* Mesmo comportamento dentro do modal */}
+            {!loadingUserType && (
+              <>
+                {!user && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      toast({
+                        title: "Faça login como cliente",
+                        description:
+                          "Entre com uma conta de cliente para avaliar um prestador.",
+                        variant: "destructive",
+                      })
+                    }
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Faça login como cliente
+                  </Button>
+                )}
+
+                {user && userType === "provider" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      toast({
+                        title: "Apenas clientes podem avaliar",
+                        description:
+                          "Use uma conta de cliente para avaliar prestadores.",
+                        variant: "destructive",
+                      })
+                    }
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Apenas clientes podem avaliar
+                  </Button>
+                )}
+
+                {user && userType === "client" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleGoToReviews}
+                  >
+                    <Star className="w-4 h-4 mr-2" />
+                    Ver avaliações
+                  </Button>
+                )}
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

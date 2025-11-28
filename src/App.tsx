@@ -4,7 +4,7 @@ import Index from "./pages/Index";
 import Auth from "./pages/auth";
 import Register from "./pages/Register";
 import Profile from "./pages/Profile";
-import ProviderReviewPage from "./pages/ProviderReviewPage"; // ⭐ CORRETO AQUI
+import { ProviderReviewPage } from "./pages/ProviderReviewPage"; 
 
 const App = () => {
   return (
@@ -22,9 +22,11 @@ const App = () => {
         element={<ProviderReviewPage />}
       />
 
+      {/* Rotas extras que você já tinha */}
       <Route path="/login" element={<Auth />} />
       <Route path="/index" element={<Index />} />
 
+      {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
