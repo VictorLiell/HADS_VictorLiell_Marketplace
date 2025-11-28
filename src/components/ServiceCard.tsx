@@ -127,7 +127,7 @@ export const ServiceCard = ({ provider }: ServiceCardProps) => {
     const msg = encodeURIComponent(
       `Olá ${provider.name}, encontrei seu serviço no Marketplace Local e gostaria de mais informações.`
     );
-    const phone = provider.phone.replace(/\D/g, ""); // remove tudo que não é número
+    const phone = provider.phone.replace(/\D/g, ""); 
     window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
   };
 
@@ -138,7 +138,7 @@ export const ServiceCard = ({ provider }: ServiceCardProps) => {
   return (
     <>
       <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow h-full flex flex-col">
-        {/* Cabeçalho */}
+        
         <CardHeader className="flex flex-row items-start justify-between gap-3">
           <div>
             <CardTitle className="flex items-center gap-2">
@@ -160,7 +160,6 @@ export const ServiceCard = ({ provider }: ServiceCardProps) => {
             </div>
           </div>
 
-          {/* Preço */}
           {provider.price && (
             <div className="text-right">
               <span className="block text-xs text-muted-foreground">
@@ -173,7 +172,7 @@ export const ServiceCard = ({ provider }: ServiceCardProps) => {
           )}
         </CardHeader>
 
-        {/* Conteúdo */}
+      
         <CardContent className="flex-1 flex flex-col gap-4">
           {provider.description && (
             <p className="text-sm text-muted-foreground line-clamp-3">
@@ -215,7 +214,7 @@ export const ServiceCard = ({ provider }: ServiceCardProps) => {
               </Button>
             </div>
 
-            {/* 🔥 Botão de avaliação com comportamento por tipo de usuário */}
+            {/* Botão de avaliação com comportamento por tipo de usuário */}
             {!loadingUserType && (
               <>
                 {/* Não logado */}
